@@ -1,67 +1,12 @@
-# AI-Powered Exercise Detection App
-
-## Overview
-This AI-powered exercise detection app uses TensorFlow.js and the MoveNet model to track body movements and count exercise repetitions in real time. It provides real-time feedback on form quality, rep counting, and XP-based gamification to encourage consistent workouts.
-
-## Features
-- **Exercise Detection**: Detects and counts Squats, Push-ups, Bicep Curls, and more.
-- **Real-time Pose Tracking**: Uses MoveNet for accurate keypoint detection.
-- **Form Analysis**: Provides feedback on exercise form and posture.
-- **AI-Powered Feedback**: Detects incorrect posture and suggests improvements.
-- **XP and Level System**: Earn XP for every rep and level up with progress.
-- **Achievements**: Unlock achievements for reaching milestones.
-- **Leaderboard**: Track user progress with an in-app leaderboard.
-- **User Progress Saving**: Stores user XP, level, and exercise history.
-- **Enhanced UI**: Updated with a more interactive and responsive design.
-
-## Technologies Used
-- **Frontend**: HTML, CSS, JavaScript
-- **AI Model**: TensorFlow.js, MoveNet Pose Detection
-- **Gamification**: XP system, level tracking, achievement notifications
-- **Backend (Upcoming Feature)**: Plan to integrate Firebase for cloud-based storage.
-
-## Installation & Setup
-1. Clone the repository:
-   ```sh
-   git clone https://github.com/naveenkm21/fitness-ai-app.git
-   cd fitness-ai-app
-   ```
-2. Open `public/exercise-detection-updated.html` in a browser.
-3. Allow camera access when prompted.
-4. Select an exercise type and start detecting!
-
-## Usage
-1. Click **"Start Camera"** to enable webcam tracking.
-2. Choose an exercise from the dropdown menu.
-3. Click **"Detect Exercise"** to begin tracking movements.
-4. Perform reps and get real-time feedback.
-5. Track XP, achievements, and leaderboard rankings.
-6. Click **"Save & Exit"** to store progress.
-
-## Supported Exercises
-- **Squats**: Tracks knee bend angle for squat detection.
-- **Push-ups**: Detects elbow angle and body alignment.
-- **Bicep Curls**: Monitors elbow movement for rep counting.
-- **Planks (Upcoming Feature)**: Detects core stability and posture.
-- **Jumping Jacks (Upcoming Feature)**: Counts repetitions accurately.
-
-## How It Works
-1. **Pose Detection**: MoveNet identifies keypoints (shoulders, elbows, knees, etc.).
-2. **Angle Calculation**: The app calculates joint angles to determine exercise state.
-3. **Repetition Counting**: A transition between states (e.g., standing to squat) counts as a rep.
-4. **Feedback System**: Displays correct/incorrect form messages and posture warnings.
-5. **XP & Achievements**: XP is awarded based on repetitions and form quality.
-
-## Future Improvements
-- **More Exercises**: Add support for additional workout types.
-- **Voice Feedback**: Audio cues for real-time coaching.
-- **Mobile Optimization**: Improve UI for mobile usage.
-- **Cloud Storage**: Store progress online using Firebase.
-- **AI-Powered Custom Workouts**: Generate personalized workout plans based on performance.
-
-## License
-This project is open-source and available under the MIT License.
-
-## Contributing
-Feel free to submit issues or pull requests to enhance the app!
-
+Aura AI - Next-Gen Fitness IntelligenceAura AI is a cutting-edge fitness application that leverages computer vision and artificial intelligence to provide real-time form correction, rep counting, and personalized workout analysis. Built with a modern tech stack, it offers a seamless, gamified experience to help users train smarter and safer.🚀 FeaturesReal-time Pose Detection: Powered by TensorFlow.js and MoveNet for lightning-fast skeletal tracking directly in the browser.AI Form Correction: Instant visual and textual feedback on your exercise form (e.g., "Go Lower", "Straighten Back").Automated Rep Counting: precise repetition tracking for Squats, Push-ups, Jumping Jacks, and Bicep Curls.Gamified Progression: Earn XP, climb the global leaderboard, and unlock achievements based on your consistency and performance.Comprehensive Analytics: Visualize your workout history, calorie burn, and progress trends over time.Secure Authentication: Robust user management powered by NextAuth.js (Google, GitHub, & Email support).Aesthetic UI: A stunning, dark-mode interface designed with Tailwind CSS, featuring glassmorphism and fluid animations.🛠️ Tech StackFramework: Next.js 14 (App Router)Language: TypeScriptStyling: Tailwind CSS & Shadcn UIAI/ML: TensorFlow.js & MoveNetAuthentication: NextAuth.js (Auth.js)Database: PostgreSQL (via Vercel Postgres)ORM: PrismaDeployment: Vercel📦 InstallationClone the repository:git clone [https://github.com/yourusername/aura-fitness.git](https://github.com/yourusername/aura-fitness.git)
+cd aura-fitness
+Install dependencies:npm install
+Set up environment variables:Create a .env file in the root directory and add the following:DATABASE_URL="your_postgres_database_url"
+NEXTAUTH_SECRET="your_nextauth_secret"
+NEXTAUTH_URL="http://localhost:3000"
+GOOGLE_CLIENT_ID="your_google_client_id"
+GOOGLE_CLIENT_SECRET="your_google_client_secret"
+Initialize the database:npx prisma generate
+npx prisma db push
+Run the development server:npm run dev
+Open http://localhost:3000 in your browser to see the application.🧠 How It WorksCamera Input: The app accesses your webcam stream securely.Pose Estimation: The MoveNet model analyzes the video feed frame-by-frame to identify key body points (joints).Geometry Analysis: Custom algorithms calculate angles between joints (e.g., hip-knee-ankle for squats) to determine exercise states.State Machine: The system tracks movement phases (e.g., "Down" vs. "Up") to count reps validly.Feedback Loop: If angles deviate from ideal biomechanics, the UI triggers corrective alerts.🤝 ContributingContributions are welcome! Please feel free to submit a Pull Request.Fork the projectCreate your Feature Branch (git checkout -b feature/AmazingFeature)Commit your Changes (git commit -m 'Add some AmazingFeature')Push to the Branch (git push origin feature/AmazingFeature)Open a Pull Request📄 LicenseThis project is licensed under the MIT License - see the [LICENSE](
