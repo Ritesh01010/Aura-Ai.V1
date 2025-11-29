@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aura AI - Live Detection</title>
+    
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            950: '#020617',
+                        },
+                        violet: {
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                            900: '#4c1d95',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .scan-line {
+            width: 100%;
+            height: 2px;
+            background: rgba(139, 92, 246, 0.5);
+            position: absolute;
+            box-shadow: 0 0 4px rgba(139, 92, 246, 0.5);
+            animation: scanning 2s linear infinite;
+            z-index: 20;
+            pointer-events: none;
+        }
+        @keyframes scanning {
+            0% { top: 0%; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-50 min-h-screen flex flex-col">
+
+    <!-- Background Gradients -->
+    <div class="fixed inset-0 pointer-events-none z-0">
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-violet-600/10 rounded-full blur-[100px]"></div>
+        <div class="absolute bottom-0 right-0 w-[600px] h-[400px] bg-indigo-600/10 rounded-full blur-[120px]"></div>
+    </div>
+
+    <main class="flex-1 container mx-auto px-4 py-8 relative z-10">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8">
+            <div class="flex items-center gap-3">
+                <a href="/" class="flex items-center gap-2 group">
+                   <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/20 group-hover:scale-105 transition-transform">
+                       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="m6.5 6.5 11 11"/><path d="m21 21-1-1"/><path d="m3 3 1 1"/><path d="m18 22 4-4"/><path d="m2 6 4-4"/><path d="m3 10 7-7"/><path d="m14 21 7-7"/></svg>
+                   </div>
+                   <span class="text-xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">Aura AI</span>
+                </a>
+                <span class="px-2 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-xs text-violet-300 font-medium">Live Beta</span>
+            </div>
+            
+            <a href="/" class="text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                Exit Session
+            </a>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="grid lg:grid-cols-[1fr_350px] gap-6">
+            
+            <!-- Left Column: Video Feed -->
+            <div class="flex flex-col gap-4">
+                <div class="relative w-full aspect-[4/3] bg-black rounded-2xl overflow-hidden border border-slate-800 shadow-2xl group">
+                    <!-- Video & Canvas Overlay -->
+                    <video id="webcam" autoplay playsinline class="absolute inset-0 w-full h-full object-cover transform scale-x-[-1]"></video>
+                    <canvas id="output" class="absolute inset-0 w-full h-full object-cover transform scale-x-[-1]"></canvas>
+                    
+                    <!-- Overlay UI -->
+                    <div class="absolute top-4 left-4 z-20">
+                        <div id="status-badge" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-xs font-medium text-slate-400">
+                            <div id="status-dot" class="w-2 h-2 rounded-full bg-slate-500"></div>
+                            <span id="exerciseStatus">Ready</span>
+                        </div>
+                    </div>
+
+                    <div class="scan-line hidden" id="scan-line"></div>
+
+                    <!-- Center Loading State -->
+                    <div id="loading" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 z-30 backdrop-blur-sm">
+                        <div class="w-12 h-12 border-4 border-violet-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+                        <p class="text-violet-200 font-medium animate-pulse">Initializing Neural Engine...</p>
+                    </div>
+                </div>
+
+                <!-- Quick Controls -->
+                <div class="glass-panel p-4 rounded-xl flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400">
+                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 12"/><path d="M21 3v9h-9"/></svg>
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-xs text-slate-500 font-medium uppercase">Active Model</label>
+                            <select id="modelSelect" class="bg-transparent text-white text-sm font-medium focus:outline-none cursor-pointer [&>option]:bg-slate-950 [&>option]:text-white">
+                                <option value="squat">Squat Detection</option>
+                                <option value="pushup">Push-up Detection</option>
+                                <option value="jumping">Jumping Jack Detection</option>
+                                <option value="bicep">Bicep Curl Detection</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button id="startBtn" class="px-6 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-medium transition-all shadow-lg shadow-violet-900/20 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                            Start Camera
+                        </button>
+                        <button id="detectBtn" disabled class="px-6 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h10"/><path d="M9 4v16"/><path d="m3 9 3 3-3 3"/><path d="M14 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2v-2"/></svg>
+                             Start AI
+                        </button>
+                         <button id="stopBtn" disabled class="px-4 py-2.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 font-medium transition-all disabled:opacity-30 disabled:cursor-not-allowed">
+                            Stop
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Stats & Feedback -->
+            <div class="flex flex-col gap-4">
+                <!-- Rep Counter -->
+                <div class="glass-panel p-6 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-b from-violet-500/5 to-transparent pointer-events-none"></div>
+                    <h3 class="text-sm font-medium text-slate-400 uppercase tracking-widest mb-2">Repetitions</h3>
+                    <div id="repCount" class="text-7xl font-bold text-white font-mono tracking-tighter">0</div>
+                    <div class="mt-2 text-xs text-emerald-400 font-medium flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Tracking Active
+                    </div>
+                </div>
+
+                <!-- Feedback Panel -->
+                <div class="glass-panel p-5 rounded-2xl flex-1">
+                    <h3 class="text-sm font-medium text-slate-400 mb-4 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                        Live Analysis
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="bg-slate-900/50 rounded-lg p-3 border border-slate-800">
+                            <p class="text-xs text-slate-500 mb-1">Current State</p>
+                            <p id="detectedExercise" class="text-lg font-medium text-violet-200">Ready</p>
+                        </div>
+                        
+                        <div class="bg-slate-900/50 rounded-lg p-3 border border-slate-800">
+                            <p class="text-xs text-slate-500 mb-1">AI Confidence</p>
+                            <div id="confidenceDisplay" class="text-sm font-mono text-slate-300">--%</div>
+                        </div>
+
+                        <!-- Console Output for Debug -->
+                        <div class="flex-1 min-h-[150px] bg-black/40 rounded-lg p-3 font-mono text-[10px] text-slate-400 overflow-y-auto border border-slate-800/50" id="debugInfo">
+                            <span class="text-violet-500">>></span> System initialized...<br>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.20.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.0.0"></script>
+    
+    <script>
+        // App state management (easier to port to React)
+        const state = {
+            model: null,
+            detector: null,
+            isModelLoaded: false,
+            isDetecting: false,
+            stream: null,
+            animationId: null,
+            currentExercise: "None",
+            selectedExerciseType: "squat",
+            reps: 0,
+            lastPoseState: "unknown",
+            poseHistory: [],
+            confidenceThreshold: 0.25,
+            debugMode: true  // Enable debug mode to help troubleshoot
+        };
+
+        // DOM elements
+        const elements = {
+            video: document.getElementById('webcam'),
+            canvas: document.getElementById('output'),
+            startBtn: document.getElementById('startBtn'),
+            detectBtn: document.getElementById('detectBtn'),
+            stopBtn: document.getElementById('stopBtn'),
+            loading: document.getElementById('loading'),
+            exerciseStatus: document.getElementById('exerciseStatus'),
+            statusDot: document.getElementById('status-dot'),
+            scanLine: document.getElementById('scan-line'),
+            detectedExercise: document.getElementById('detectedExercise'),
+            repCount: document.getElementById('repCount'),
+            modelSelect: document.getElementById('modelSelect'),
+            confidenceDisplay: document.getElementById('confidenceDisplay'),
+            debugInfo: document.getElementById('debugInfo')
+        };
+        
+        let ctx;
+
+        // Initialize the application
+        async function init() {
+            console.log("Initializing application...");
+            
+            // Initialize canvas context
+            ctx = elements.canvas.getContext('2d');
+            
+            // Debug info update
+            updateDebugInfo("Application initializing...");
+            
+            // Load TensorFlow.js
+            try {
+                await tf.ready();
+                console.log("TensorFlow.js is ready");
+                updateDebugInfo("TensorFlow.js loaded successfully");
+                
+                // Load the model
+                await loadModel();
+                
+                // Set up event listeners
+                setupEventListeners();
+                
+                elements.loading.style.display = "none";
+            } catch (error) {
+                console.error("Error initializing application:", error);
+                updateDebugInfo("Error: " + error.message);
+            }
+        }
+
+        // Load the pose detection model
+        async function loadModel() {
+            try {
+                updateDebugInfo("Loading MoveNet model...");
+                
+                // Use MoveNet - a newer and more efficient model than PoseNet
+                const detectorConfig = {
+                    modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
+                    enableSmoothing: true
+                };
+                
+                state.detector = await poseDetection.createDetector(
+                    poseDetection.SupportedModels.MoveNet, 
+                    detectorConfig
+                );
+                
+                console.log("Model loaded successfully");
+                updateDebugInfo("MoveNet model loaded successfully");
+                state.isModelLoaded = true;
+                return true;
+            } catch (error) {
+                console.error("Error loading model:", error);
+                updateDebugInfo("Error loading model: " + error.message);
+                return false;
+            }
+        }
+
+        // Helper to update debug info
+        function updateDebugInfo(message) {
+            if (!state.debugMode) return;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            const debugMsg = `[${timestamp}] ${message}`;
+            console.log(debugMsg);
+            
+            if (elements.debugInfo) {
+                elements.debugInfo.innerHTML += debugMsg + "<br>";
+                elements.debugInfo.scrollTop = elements.debugInfo.scrollHeight;
+            }
+        }
+
+        // Set up event listeners
+        function setupEventListeners() {
+            // Start camera button
+            elements.startBtn.addEventListener('click', startCamera);
+            
+            // Detect exercise button
+            elements.detectBtn.addEventListener('click', startDetection);
+            
+            // Stop detection button
+            elements.stopBtn.addEventListener('click', stopDetection);
+            
+            // Model selection
+            elements.modelSelect.addEventListener('change', (e) => {
+                state.selectedExerciseType = e.target.value;
+                state.reps = 0;
+                elements.repCount.textContent = "0";
+                state.lastPoseState = "unknown";
+                updateDebugInfo("Selected exercise type: " + state.selectedExerciseType);
+            });
+        }
+
+        // Start the webcam
+        async function startCamera() {
+            try {
+                updateDebugInfo("Starting camera...");
+                
+                state.stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: 640,
+                        height: 480
+                    },
+                    audio: false
+                });
+                
+                elements.video.srcObject = state.stream;
+                
+                // Wait for video to be ready
+                elements.video.onloadedmetadata = () => {
+                    elements.canvas.width = elements.video.videoWidth;
+                    elements.canvas.height = elements.video.videoHeight;
+                    
+                    // Ensure canvas is positioned correctly
+                    elements.canvas.style.width = elements.video.videoWidth + "px";
+                    elements.canvas.style.height = elements.video.videoHeight + "px";
+                    
+                    elements.startBtn.classList.add('hidden'); // Hide start button
+                    elements.detectBtn.disabled = false;
+                    updateDebugInfo("Camera started. Video dimensions: " + 
+                                  elements.video.videoWidth + "x" + elements.video.videoHeight);
+                };
+            } catch (error) {
+                console.error("Error accessing webcam:", error);
+                alert("Error accessing webcam. Please ensure you have a webcam connected and have granted permission.");
+                updateDebugInfo("Error accessing webcam: " + error.message);
+            }
+        }
+
+        // Start pose detection
+        function startDetection() {
+            if (!state.isModelLoaded) {
+                alert("Model is not loaded yet. Please wait.");
+                return;
+            }
+            
+            state.isDetecting = true;
+            
+            // UI Updates
+            elements.detectBtn.disabled = true;
+            elements.stopBtn.disabled = false;
+            elements.exerciseStatus.textContent = "Analyzing";
+            elements.exerciseStatus.classList.replace('text-slate-400', 'text-emerald-400');
+            elements.statusDot.classList.replace('bg-slate-500', 'bg-emerald-500');
+            elements.statusDot.classList.add('animate-pulse');
+            elements.scanLine.classList.remove('hidden');
+            
+            // Reset counters
+            state.reps = 0;
+            elements.repCount.textContent = "0";
+            state.lastPoseState = "unknown";
+            state.poseHistory = [];
+            
+            updateDebugInfo("Starting detection for: " + state.selectedExerciseType);
+            
+            // Start detection loop
+            detectPoses();
+        }
+
+        // Stop pose detection
+        function stopDetection() {
+            state.isDetecting = false;
+            
+            if (state.animationId) {
+                cancelAnimationFrame(state.animationId);
+            }
+            
+            // UI Updates
+            elements.detectBtn.disabled = false;
+            elements.stopBtn.disabled = true;
+            elements.exerciseStatus.textContent = "Paused";
+            elements.exerciseStatus.classList.replace('text-emerald-400', 'text-slate-400');
+            elements.statusDot.classList.replace('bg-emerald-500', 'bg-slate-500');
+            elements.statusDot.classList.remove('animate-pulse');
+            elements.scanLine.classList.add('hidden');
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
+            updateDebugInfo("Detection stopped");
+        }
+
+        // Main detection loop
+        async function detectPoses() {
+            if (!state.isDetecting) return;
+            
+            try {
+                // Detect poses
+                const poses = await state.detector.estimatePoses(elements.video);
+                
+                // Clear canvas
+                ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
+                
+                // If poses detected
+                if (poses && poses.length > 0) {
+                    const pose = poses[0]; // Use the first detected person
+                    
+                    // Draw skeleton
+                    drawSkeleton(pose);
+                    
+                    // Store pose for smoothing
+                    state.poseHistory.push(pose);
+                    if (state.poseHistory.length > 5) {
+                        state.poseHistory.shift();
+                    }
+                    
+                    // Analyze pose to detect exercise
+                    analyzeExercise(pose);
+                } else {
+                    updateDebugInfo("No poses detected in this frame");
+                }
+                
+                // Continue detection loop
+                state.animationId = requestAnimationFrame(detectPoses);
+            } catch (error) {
+                console.error("Error during pose detection:", error);
+                elements.exerciseStatus.textContent = "Error detecting";
+                state.isDetecting = false;
+                updateDebugInfo("Detection error: " + error.message);
+            }
+        }
+
+        // Draw the skeleton on canvas
+        function drawSkeleton(pose) {
+            if (!pose || !pose.keypoints) {
+                updateDebugInfo("No keypoints to draw");
+                return;
+            }
+            
+            const keypoints = pose.keypoints;
+            
+            // Log keypoints for debugging
+            if (state.debugMode) {
+                const visibleKeypoints = keypoints.filter(kp => kp.score > state.confidenceThreshold).length;
+                // updateDebugInfo(`Drawing ${visibleKeypoints}/${keypoints.length} keypoints`);
+            }
+            
+            // Draw keypoints
+            keypoints.forEach(keypoint => {
+                if (keypoint.score > state.confidenceThreshold) {
+                    ctx.beginPath();
+                    ctx.arc(keypoint.x, keypoint.y, 5, 0, 2 * Math.PI);
+                    ctx.fillStyle = '#8b5cf6'; // Violet-500
+                    ctx.fill();
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    
+                    // Always display keypoint names for better debugging
+                    /*
+                    ctx.fillStyle = 'white';
+                    ctx.font = '10px Arial';
+                    ctx.fillText(keypoint.name, keypoint.x + 7, keypoint.y - 3);
+                    */
+                }
+            });
+            
+            // Define connections for skeleton
+            const connections = [
+                ['nose', 'left_eye'], ['left_eye', 'left_ear'], ['nose', 'right_eye'],
+                ['right_eye', 'right_ear'], ['left_shoulder', 'right_shoulder'],
+                ['left_shoulder', 'left_elbow'], ['left_elbow', 'left_wrist'],
+                ['right_shoulder', 'right_elbow'], ['right_elbow', 'right_wrist'],
+                ['left_shoulder', 'left_hip'], ['right_shoulder', 'right_hip'],
+                ['left_hip', 'right_hip'], ['left_hip', 'left_knee'],
+                ['left_knee', 'left_ankle'], ['right_hip', 'right_knee'],
+                ['right_knee', 'right_ankle']
+            ];
+            
+            // Draw connections
+            ctx.strokeStyle = 'rgba(139, 92, 246, 0.8)'; // Violet w/ opacity
+            ctx.lineWidth = 3;
+            
+            connections.forEach(([p1Name, p2Name]) => {
+                const p1 = keypoints.find(kp => kp.name === p1Name);
+                const p2 = keypoints.find(kp => kp.name === p2Name);
+                
+                if (p1 && p2 && p1.score > state.confidenceThreshold && p2.score > state.confidenceThreshold) {
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.stroke();
+                }
+            });
+            
+            // Display confidence
+            const avgConfidence = keypoints.reduce((sum, kp) => sum + kp.score, 0) / keypoints.length;
+            elements.confidenceDisplay.textContent = `${(avgConfidence * 100).toFixed(1)}%`;
+            elements.confidenceDisplay.className = avgConfidence > 0.5 ? 'text-emerald-400 font-mono' : 'text-red-400 font-mono';
+        }
+
+        // Analyze pose to detect exercises
+        function analyzeExercise(pose) {
+            if (!pose || !pose.keypoints) {
+                return;
+            }
+            
+            const keypointMap = {};
+            pose.keypoints.forEach(kp => {
+                keypointMap[kp.name] = {
+                    x: kp.x,
+                    y: kp.y,
+                    score: kp.score
+                };
+            });
+            
+            // Call the appropriate exercise detection based on selection
+            switch (state.selectedExerciseType) {
+                case 'squat':
+                    detectSquat(keypointMap);
+                    break;
+                case 'pushup':
+                    detectPushup(keypointMap);
+                    break;
+                case 'jumping':
+                    detectJumpingJack(keypointMap);
+                    break;
+                case 'bicep':
+                    detectBicepCurl(keypointMap);
+                    break;
+                default:
+                    detectSquat(keypointMap);
+            }
+            
+            // Update UI
+            elements.detectedExercise.textContent = state.currentExercise;
+        }
+
+        // Detect squats
+        function detectSquat(keypoints) {
+            const leftHip = keypoints['left_hip'];
+            const rightHip = keypoints['right_hip'];
+            const leftKnee = keypoints['left_knee'];
+            const rightKnee = keypoints['right_knee'];
+            const leftAnkle = keypoints['left_ankle'];
+            const rightAnkle = keypoints['right_ankle'];
+            
+            // Check if key points are detected with sufficient confidence
+            if (
+                leftHip && rightHip && leftKnee && rightKnee && leftAnkle && rightAnkle &&
+                leftHip.score > state.confidenceThreshold && rightHip.score > state.confidenceThreshold &&
+                leftKnee.score > state.confidenceThreshold && rightKnee.score > state.confidenceThreshold &&
+                leftAnkle.score > state.confidenceThreshold && rightAnkle.score > state.confidenceThreshold
+            ) {
+                // Calculate angle at knee for more accurate squat detection
+                const kneeAngle = calculateAngle(
+                    [(leftHip.x + rightHip.x) / 2, (leftHip.y + rightHip.y) / 2],
+                    [(leftKnee.x + rightKnee.x) / 2, (leftKnee.y + rightKnee.y) / 2],
+                    [(leftAnkle.x + rightAnkle.x) / 2, (leftAnkle.y + rightAnkle.y) / 2]
+                );
+                
+                // Update debug info
+                // updateDebugInfo(`Squat knee angle: ${kneeAngle.toFixed(1)}°`);
+                
+                // Use knee angle for detection
+                if (kneeAngle < 120) { // Person is in squat position
+                    if (state.lastPoseState === "standing") {
+                        // Transition from standing to squatting - count a rep
+                        state.reps++;
+                        elements.repCount.textContent = state.reps;
+                        updateDebugInfo("SQUAT REP COUNTED: " + state.reps);
+                    }
+                    state.lastPoseState = "squatting";
+                    state.currentExercise = "Down";
+                } else if (kneeAngle > 160) { // Person is standing
+                    state.lastPoseState = "standing";
+                    state.currentExercise = "Up";
+                } else {
+                    state.currentExercise = "Squatting...";
+                }
+            } else {
+                state.currentExercise = "Detecting...";
+                // updateDebugInfo("Missing required keypoints for squat detection");
+            }
+        }
+
+        // Detect push-ups
+        function detectPushup(keypoints) {
+            const leftShoulder = keypoints['left_shoulder'];
+            const rightShoulder = keypoints['right_shoulder'];
+            const leftElbow = keypoints['left_elbow'];
+            const rightElbow = keypoints['right_elbow'];
+            const leftWrist = keypoints['left_wrist'];
+            const rightWrist = keypoints['right_wrist'];
+            
+            if (
+                leftShoulder && rightShoulder && leftElbow && rightElbow && leftWrist && rightWrist &&
+                leftShoulder.score > state.confidenceThreshold && rightShoulder.score > state.confidenceThreshold &&
+                leftElbow.score > state.confidenceThreshold && rightElbow.score > state.confidenceThreshold &&
+                leftWrist.score > state.confidenceThreshold && rightWrist.score > state.confidenceThreshold
+            ) {
+                // Calculate elbow angle
+                const leftElbowAngle = calculateAngle(
+                    [leftShoulder.x, leftShoulder.y],
+                    [leftElbow.x, leftElbow.y],
+                    [leftWrist.x, leftWrist.y]
+                );
+                
+                const rightElbowAngle = calculateAngle(
+                    [rightShoulder.x, rightShoulder.y],
+                    [rightElbow.x, rightElbow.y],
+                    [rightWrist.x, rightWrist.y]
+                );
+                
+                // Average elbow angle
+                const elbowAngle = (leftElbowAngle + rightElbowAngle) / 2;
+                
+                // updateDebugInfo(`Pushup elbow angle: ${elbowAngle.toFixed(1)}°`);
+                
+                if (elbowAngle < 90) { // Arms bent - down position
+                    if (state.lastPoseState === "up") {
+                        // Transition from up to down - count a rep
+                        state.reps++;
+                        elements.repCount.textContent = state.reps;
+                        updateDebugInfo("PUSHUP REP COUNTED: " + state.reps);
+                    }
+                    state.lastPoseState = "down";
+                    state.currentExercise = "Down";
+                } else if (elbowAngle > 150) { // Arms straight - up position
+                    state.lastPoseState = "up";
+                    state.currentExercise = "Up";
+                } else {
+                    state.currentExercise = "Pushing...";
+                }
+            } else {
+                state.currentExercise = "Detecting...";
+                // updateDebugInfo("Missing required keypoints for pushup detection");
+            }
+        }
+
+        // Detect jumping jacks
+        function detectJumpingJack(keypoints) {
+            const leftShoulder = keypoints['left_shoulder'];
+            const rightShoulder = keypoints['right_shoulder'];
+            const leftHip = keypoints['left_hip'];
+            const rightHip = keypoints['right_hip'];
+            const leftAnkle = keypoints['left_ankle'];
+            const rightAnkle = keypoints['right_ankle'];
+            
+            if (
+                leftShoulder && rightShoulder && leftHip && rightHip && leftAnkle && rightAnkle &&
+                leftShoulder.score > state.confidenceThreshold && rightShoulder.score > state.confidenceThreshold &&
+                leftHip.score > state.confidenceThreshold && rightHip.score > state.confidenceThreshold &&
+                leftAnkle.score > state.confidenceThreshold && rightAnkle.score > state.confidenceThreshold
+            ) {
+                // Calculate distances for jumping jack detection
+                const shoulderDistance = Math.sqrt(
+                    Math.pow(rightShoulder.x - leftShoulder.x, 2) + 
+                    Math.pow(rightShoulder.y - leftShoulder.y, 2)
+                );
+                
+                const ankleDistance = Math.sqrt(
+                    Math.pow(rightAnkle.x - leftAnkle.x, 2) + 
+                    Math.pow(rightAnkle.y - leftAnkle.y, 2)
+                );
+                
+                // Normalize by height (distance between shoulders and hips)
+                const torsoHeight = Math.sqrt(
+                    Math.pow((leftShoulder.x + rightShoulder.x)/2 - (leftHip.x + rightHip.x)/2, 2) + 
+                    Math.pow((leftShoulder.y + rightShoulder.y)/2 - (leftHip.y + rightHip.y)/2, 2)
+                );
+                
+                const normalizedShoulderDist = shoulderDistance / torsoHeight;
+                const normalizedAnkleDist = ankleDistance / torsoHeight;
+                
+                // updateDebugInfo(`Jumping Jack - Shoulder dist: ${normalizedShoulderDist.toFixed(2)}, Ankle dist: ${normalizedAnkleDist.toFixed(2)}`);
+                
+                if (normalizedShoulderDist > 1.5 && normalizedAnkleDist > 0.8) {
+                    // Arms and legs are spread
+                    if (state.lastPoseState === "closed") {
+                        // Transition from closed to open - count a rep
+                        state.reps++;
+                        elements.repCount.textContent = state.reps;
+                        updateDebugInfo("JUMPING JACK REP COUNTED: " + state.reps);
+                    }
+                    state.lastPoseState = "open";
+                    state.currentExercise = "Open";
+                } else if (normalizedShoulderDist < 1.2 && normalizedAnkleDist < 0.5) {
+                    // Arms and legs are together
+                    state.lastPoseState = "closed";
+                    state.currentExercise = "Closed";
+                } else {
+                    state.currentExercise = "Jumping...";
+                }
+            } else {
+                state.currentExercise = "Detecting...";
+                // updateDebugInfo("Missing required keypoints for jumping jack detection");
+            }
+        }
+
+        // Detect bicep curls
+        function detectBicepCurl(keypoints) {
+            // We'll focus on right arm for simplicity, could expand to track both
+            const rightShoulder = keypoints['right_shoulder'];
+            const rightElbow = keypoints['right_elbow'];
+            const rightWrist = keypoints['right_wrist'];
+            
+            if (
+                rightShoulder && rightElbow && rightWrist &&
+                rightShoulder.score > state.confidenceThreshold && 
+                rightElbow.score > state.confidenceThreshold && 
+                rightWrist.score > state.confidenceThreshold
+            ) {
+                // Calculate elbow angle
+                const elbowAngle = calculateAngle(
+                    [rightShoulder.x, rightShoulder.y],
+                    [rightElbow.x, rightElbow.y],
+                    [rightWrist.x, rightWrist.y]
+                );
+                
+                // updateDebugInfo(`Bicep curl angle: ${elbowAngle.toFixed(1)}°`);
+                
+                // Analyze the angle to determine bicep curl state
+                if (elbowAngle < 80) { // Arm is contracted (curl up position)
+                    if (state.lastPoseState === "down") {
+                        // Transition from down to up - count a rep
+                        state.reps++;
+                        elements.repCount.textContent = state.reps;
+                        updateDebugInfo("BICEP CURL REP COUNTED: " + state.reps);
+                    }
+                    state.lastPoseState = "up";
+                    state.currentExercise = "Curled";
+                } else if (elbowAngle > 150) { // Arm is extended (starting position)
+                    state.lastPoseState = "down";
+                    state.currentExercise = "Extended";
+                } else {
+                    state.currentExercise = "Curling...";
+                }
+            } else {
+                state.currentExercise = "Detecting...";
+                // updateDebugInfo("Missing required keypoints for bicep curl detection");
+            }
+        }
+
+        // Calculate angle between three points
+        function calculateAngle(p1, p2, p3) {
+            const radians = Math.atan2(p3[1] - p2[1], p3[0] - p2[0]) - 
+                          Math.atan2(p1[1] - p2[1], p1[0] - p2[0]);
+            
+            let angle = Math.abs(radians * 180.0 / Math.PI);
+            
+            if (angle > 180.0) {
+                angle = 360.0 - angle;
+            }
+            
+            return angle;
+        }
+
+        // Initialize the application when the page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
