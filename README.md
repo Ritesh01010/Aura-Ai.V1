@@ -1,3 +1,5 @@
+
+
 # **Aura AI – Next-Gen Fitness Intelligence**
 
 Aura AI is a next-generation fitness platform that blends computer vision, biomechanics, and artificial intelligence to guide users toward smarter, safer, and more enjoyable workouts. With real-time form correction, automatic rep counting, and gameified progression, it turns ordinary exercise into a personal training experience—right in your browser.
@@ -50,12 +52,7 @@ No manual input. No cheating. Just clean rep tracking.
 ### **Modern, Aesthetic UI**
 
 * Dark mode
-* Glassmorphism
-* Smooth animations
-* Built with **Tailwind CSS** & **Shadcn UI**
-
 ---
-
 ## 🛠️ **Tech Stack**
 
 | Layer          | Technology                   |
@@ -98,7 +95,6 @@ NEXTAUTH_URL="http://localhost:3000"
 GOOGLE_CLIENT_ID="your_google_client_id"
 GOOGLE_CLIENT_SECRET="your_google_client_secret"
 ```
-
 ### **4. Initialize Prisma**
 
 ```bash
@@ -158,5 +154,3 @@ This project is licensed under the **MIT License**.
 See the `LICENSE` file for more details.
 
 ---
-
-
